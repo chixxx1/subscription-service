@@ -9,6 +9,7 @@ import (
 	sub_service "github.com/chixxx1/subscription-service/internal/service/subscription"
 	"github.com/chixxx1/subscription-service/internal/transport/http/dto"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -39,6 +40,12 @@ func (h *SubscriptionHandler) CreateSubscription(c *gin.Context) {
 	var req dto.CreateSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	_, err := uuid.Parse(req.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid user_id format, must be valid UUID"})
 		return
 	}
 
@@ -164,6 +171,12 @@ func (h *SubscriptionHandler) Update(c *gin.Context) {
 	var req dto.UpdateSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	_, err = uuid.Parse(req.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid user_id format, must be valid UUID"})
 		return
 	}
 
