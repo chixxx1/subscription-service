@@ -1,0 +1,282 @@
+basePath: /api/v1
+definitions:
+  github_com_chixxx1_subscription-service_internal_domain.Subscription:
+    properties:
+      createdAt:
+        type: string
+      endDate:
+        type: string
+      id:
+        type: integer
+      price:
+        type: integer
+      serviceName:
+        type: string
+      startDate:
+        type: string
+      updatedAt:
+        type: string
+      userID:
+        description: UUID
+        type: string
+    type: object
+  github_com_chixxx1_subscription-service_internal_transport_http_dto.CreateSubscriptionRequest:
+    properties:
+      end_date:
+        type: string
+      price:
+        minimum: 1
+        type: integer
+      service_name:
+        type: string
+      start_date:
+        type: string
+      user_id:
+        type: string
+    required:
+    - price
+    - service_name
+    - start_date
+    - user_id
+    type: object
+  github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  github_com_chixxx1_subscription-service_internal_transport_http_dto.UpdateSubscriptionRequest:
+    properties:
+      end_date:
+        type: string
+      price:
+        minimum: 1
+        type: integer
+      service_name:
+        type: string
+      start_date:
+        type: string
+      user_id:
+        type: string
+    required:
+    - price
+    - service_name
+    - start_date
+    - user_id
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API for managing user subscriptions and calculating costs.
+  title: Subscription Service API
+  version: "1.0"
+paths:
+  /subscriptions:
+    get:
+      description: Retrieve a list of subscriptions with optional filtering and pagination
+      parameters:
+      - description: Filter by User ID (UUID)
+        in: query
+        name: user_id
+        type: string
+      - description: Filter by Service Name
+        in: query
+        name: service_name
+        type: string
+      - description: Number of records to return (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Number of records to skip (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_domain.Subscription'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+      summary: List all subscriptions
+      tags:
+      - subscriptions
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription record for a user
+      parameters:
+      - description: Subscription data
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.CreateSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+      summary: Create a new subscription
+      tags:
+      - subscriptions
+  /subscriptions/{id}:
+    delete:
+      description: Remove a subscription record by its ID
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+      summary: Delete a subscription
+      tags:
+      - subscriptions
+    get:
+      description: Retrieve details of a special subscription by its ID
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_domain.Subscription'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+      summary: Get subscription by ID
+      tags:
+      - subscriptions
+    put:
+      consumes:
+      - application/json
+      description: Update details of a subscription by its ID
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated subscription data
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.UpdateSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+      summary: Update an existing subscription
+      tags:
+      - subscriptions
+  /subscriptions/total-cost:
+    get:
+      description: Calculate total cost for a period with optional filters
+      parameters:
+      - description: User ID (UUID)
+        in: query
+        name: user_id
+        type: string
+      - description: Service Name
+        in: query
+        name: service_name
+        type: string
+      - description: Start Period (YYYY-MM)
+        in: query
+        name: period_start
+        required: true
+        type: string
+      - description: End Period (YYYY-MM)
+        in: query
+        name: period_end
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_chixxx1_subscription-service_internal_transport_http_dto.ErrorResponse'
+      summary: Get total cost of subscriptions
+      tags:
+      - subscriptions
+swagger: "2.0"
