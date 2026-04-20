@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -103,6 +104,11 @@ func (h *SubscriptionHandler) GetByID(c *gin.Context) {
 
 	sub, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
+		if errors.Is(err, domain.ErrSubscriptionNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "subscription not found"})
+			return
+		}
+
 		h.logger.Error("failed to get subscription", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal server error"})
 		return
@@ -287,6 +293,7 @@ func (h *SubscriptionHandler) GetTotalCost(c *gin.Context) {
 	if err != nil {
 		h.logger.Error("failed to get total cost", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal server error"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"total_price": total})

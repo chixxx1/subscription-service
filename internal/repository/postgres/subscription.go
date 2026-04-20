@@ -2,9 +2,11 @@ package sub_posgres_repo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/chixxx1/subscription-service/internal/domain"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -55,6 +57,9 @@ func (sr *SubscriptionRepo) GetByID(ctx context.Context, id int) (*domain.Subscr
 		&sub.UpdatedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrSubscriptionNotFound
+		}
 		return nil, fmt.Errorf("subscriptionRepo getByID: %w", err)
 	}
 	return &sub, nil
@@ -120,7 +125,7 @@ func (sr *SubscriptionRepo) Update(ctx context.Context, sub domain.Subscription)
 		WHERE id = $6
 	`
 
-	_, err := sr.db.Exec(ctx, query,
+	tag, err := sr.db.Exec(ctx, query,
 		sub.ServiceName,
 		sub.Price,
 		sub.UserID,
@@ -130,6 +135,9 @@ func (sr *SubscriptionRepo) Update(ctx context.Context, sub domain.Subscription)
 	)
 	if err != nil {
 		return fmt.Errorf("SubscriptionRepo.Update: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrSubscriptionNotFound
 	}
 
 	return nil

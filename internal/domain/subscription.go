@@ -1,6 +1,11 @@
 package domain
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var ErrSubscriptionNotFound = errors.New("subscription not found")
 
 type Subscription struct {
 	ID          int
