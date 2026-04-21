@@ -11,10 +11,10 @@ type CreateSubscriptionRequest struct {
 }
 
 type UpdateSubscriptionRequest struct {
-	ServiceName string `json:"service_name" binding:"required"`
-	Price       int    `json:"price" binding:"required,min=1"`
-	UserID      string `json:"user_id" binding:"required,uuid"`
-	StartDate   string `json:"start_date" binding:"required"`
+	ServiceName string `json:"service_name"`
+	Price       int    `json:"price"`
+	UserID      string `json:"user_id"`
+	StartDate   string `json:"start_date"`
 	EndDate     string `json:"end_date,omitempty"`
 }
 

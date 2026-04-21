@@ -74,13 +74,17 @@ func (h *SubscriptionHandler) CreateSubscription(c *gin.Context) {
 		EndDate:     endDate,
 	}
 
-	if err := h.service.Create(c.Request.Context(), sub); err != nil {
+	newID, err := h.service.Create(c.Request.Context(), sub)
+	if err != nil {
 		h.logger.Error("failed to create subscription", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal server error"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"status": "created"})
+	c.JSON(http.StatusCreated, gin.H{
+		"id":     newID,
+		"status": "created",
+	})
 }
 
 // GetByID godoc
@@ -180,16 +184,23 @@ func (h *SubscriptionHandler) Update(c *gin.Context) {
 		return
 	}
 
-	_, err = uuid.Parse(req.UserID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid user_id format, must be valid UUID"})
-		return
+	if req.UserID != "" {
+		_, err = uuid.Parse(req.UserID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid user_id format, must be valid UUID"})
+			return
+		}
 	}
 
-	startDate, err := time.Parse("01-2006", req.StartDate)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid start_date format, use MM-YYYY"})
-		return
+	var startDate time.Time
+	//var zeroTime time.Time
+
+	if req.StartDate != "" {
+		startDate, err = time.Parse("01-2006", req.StartDate)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid start_date format, use MM-YYYY"})
+			return
+		}
 	}
 
 	var endDate *time.Time
@@ -211,7 +222,11 @@ func (h *SubscriptionHandler) Update(c *gin.Context) {
 		EndDate:     endDate,
 	}
 
-	if err := h.service.Update(c.Request.Context(), sub); err != nil {
+	if err := h.service.Update(c.Request.Context(), sub, true); err != nil {
+		if errors.Is(err, domain.ErrSubscriptionNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "subscription not found"})
+			return
+		}
 		h.logger.Error("failed to update subscription", zap.Int("id", id), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal server error"})
 		return
@@ -239,6 +254,10 @@ func (h *SubscriptionHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
+		if errors.Is(err, domain.ErrSubscriptionNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "subscription not found"})
+			return
+		}
 		h.logger.Error("failed to delete subscription", zap.Int("id", id), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal server error"})
 		return

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/chixxx1/subscription-service/internal/domain"
 	"go.uber.org/zap"
@@ -27,27 +28,27 @@ func NewSubscriptionService(repo domain.SubscriptionRepository, logger *zap.Logg
 	}
 }
 
-func (s *SubscriptionService) Create(ctx context.Context, sub domain.Subscription) error {
+func (s *SubscriptionService) Create(ctx context.Context, sub domain.Subscription) (int, error) {
 	s.logger.Info("creating subscription", zap.String("service_name", sub.ServiceName), zap.String("user_id", sub.UserID))
 
 	if sub.Price <= 0 {
 		s.logger.Warn("invalid price", zap.Int("price", sub.Price))
-		return ErrInvalidPrice
+		return 0, ErrInvalidPrice
 	}
 
 	if sub.EndDate != nil && sub.EndDate.Before(sub.StartDate) {
 		s.logger.Warn("invalid dates", zap.Time("start", sub.StartDate), zap.Time("end", *sub.EndDate))
-		return ErrInvalidDates
+		return 0, ErrInvalidDates
 	}
 
-	err := s.repo.Create(ctx, sub)
+	newID, err := s.repo.Create(ctx, sub)
 	if err != nil {
 		s.logger.Error("failed to create subscription in db", zap.Error(err))
-		return fmt.Errorf("service create: %w", err)
+		return 0, fmt.Errorf("service create: %w", err)
 	}
 
-	s.logger.Info("subscription created successfully", zap.Int("id", sub.ID))
-	return nil
+	s.logger.Info("subscription created successfully", zap.Int("id", newID))
+	return newID, nil
 }
 
 func (s *SubscriptionService) GetByID(ctx context.Context, id int) (*domain.Subscription, error) {
@@ -60,13 +61,13 @@ func (s *SubscriptionService) GetByID(ctx context.Context, id int) (*domain.Subs
 
 func (s *SubscriptionService) List(ctx context.Context, filter domain.SubscriptionFilter) ([]domain.Subscription, error) {
 	if filter.Limit <= 0 {
-		filter.Limit = 50 
+		filter.Limit = 50
 	}
-	
+
 	if filter.Offset < 0 {
 		filter.Offset = 0
 	}
-	
+
 	if filter.Limit > 1000 {
 		filter.Limit = 1000
 	}
@@ -78,8 +79,38 @@ func (s *SubscriptionService) List(ctx context.Context, filter domain.Subscripti
 	return subs, nil
 }
 
-func (s *SubscriptionService) Update(ctx context.Context, sub domain.Subscription) error {
+func (s *SubscriptionService) Update(ctx context.Context, sub domain.Subscription, isPartial bool) error {
 	s.logger.Info("updating subscription", zap.Int("id", sub.ID))
+
+	if isPartial {
+		oldSub, err := s.repo.GetByID(ctx, sub.ID)
+		if err != nil {
+			return fmt.Errorf("service update fetch old: %w", err)
+		}
+
+		if sub.ServiceName == "" {
+			sub.ServiceName = oldSub.ServiceName
+		}
+
+		if sub.Price == 0 {
+			sub.Price = oldSub.Price
+		}
+
+		if sub.UserID == "" {
+			sub.UserID = oldSub.UserID
+		}
+
+		var zeroTime time.Time
+		if sub.StartDate.Equal(zeroTime) {
+			sub.StartDate = oldSub.StartDate
+		}
+
+		if sub.EndDate == nil {
+			sub.EndDate = oldSub.EndDate
+		} else if sub.EndDate.Equal(zeroTime) {
+			sub.EndDate = oldSub.EndDate
+		}
+	}
 
 	if sub.Price <= 0 {
 		return ErrInvalidPrice

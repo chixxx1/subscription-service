@@ -3,6 +3,11 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/chixxx1/subscription-service/internal/config"
 	postgres_pool "github.com/chixxx1/subscription-service/internal/db/postgres"
@@ -52,7 +57,27 @@ func main() {
 
 	logger.Info("Server is ready to accept connections")
 
-	if err := router.Run(":8080"); err != nil {
-		logger.Fatal("Failed to start server", zap.Error(err))
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: router,
 	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			logger.Fatal("HTTP server ListenAndServe", zap.Error(err))
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	logger.Info("Shutting down server...")
+
+	ctxShutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctxShutdown); err != nil {
+		logger.Fatal("Server forced to shutdown", zap.Error(err))
+	}
+
+	logger.Info("Server exited")
 }
